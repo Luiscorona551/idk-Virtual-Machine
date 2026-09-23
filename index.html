@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Idk Virtual Machine</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">IDK</div><div><strong>Virtual Machine</strong><span>Manager</span></div></div>
+    <button class="nav active" data-view="machines">▣ <span>My Machines</span></button>
+    <button class="nav" data-view="create">＋ <span>Create VM</span></button>
+    <button class="nav" data-view="storage">◫ <span>Storage</span></button>
+    <div class="side-bottom"><span class="dot"></span> Backend: Not connected</div>
+  </aside>
+  <main>
+    <header><div><div class="eyebrow">IDK 10.0 • VIRTUALIZATION</div><h1 id="title">My Machines</h1></div><button class="primary" id="createTop">＋ Create VM</button></header>
+    <section id="machines" class="view">
+      <div id="empty" class="empty"><div class="big-icon">▣</div><h2>No virtual machines yet</h2><p>Create a VM configuration now. Real virtualization can be connected later.</p><button class="primary" id="createEmpty">Create your first VM</button></div>
+      <div id="machineGrid" class="machine-grid"></div>
+    </section>
+    <section id="create" class="view hidden">
+      <div class="form-card">
+        <div class="section-head"><div><h2>New Virtual Machine</h2><p>Configure the hardware profile for your future VM.</p></div><span class="pill">CONFIG ONLY</span></div>
+        <form id="vmForm">
+          <label>VM name<input id="name" value="My Idk VM" required></label>
+          <div class="two"><label>CPU cores<input id="cpu" type="number" min="1" max="64" value="4"></label><label>RAM<input id="ram" type="number" min="1" max="512" value="8"><small>GB</small></label></div>
+          <div class="two"><label>Disk<input id="disk" type="number" min="1" max="4096" value="64"><small>GB</small></label><label>Network<select id="network"><option>NAT</option><option>Bridged</option><option>Isolated</option></select></label></div>
+          <label>ISO image<input id="iso" placeholder="No ISO selected"><small>Example: ubuntu.iso</small></label>
+          <div class="two"><label>Display<select id="display"><option>Default</option><option>VirtIO GPU</option><option>VGA</option></select></label><label>Sound<select id="sound"><option>Enabled</option><option>Disabled</option></select></label></div>
+          <div class="actions"><button type="button" class="secondary" id="cancel">Cancel</button><button class="primary">Create VM</button></div>
+        </form>
+      </div>
+    </section>
+    <section id="storage" class="view hidden">
+      <div class="form-card"><div class="section-head"><div><h2>Storage</h2><p>Virtual disks and ISO files will appear here once a backend is connected.</p></div></div><div class="storage-placeholder"><div class="big-icon">◫</div><strong>No storage connected</strong><span>Local file access and VM disk management will be added with the backend.</span></div></div>
+    </section>
+  </main>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
