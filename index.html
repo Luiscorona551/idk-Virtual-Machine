@@ -17,25 +17,85 @@
   </aside>
   <main>
     <header><div><div class="eyebrow">IDK 10.0 • VIRTUALIZATION</div><h1 id="title">My Machines</h1></div><button class="primary" id="createTop">＋ Create VM</button></header>
+
     <section id="machines" class="view">
-      <div id="empty" class="empty"><div class="big-icon">▣</div><h2>No virtual machines yet</h2><p>Create a VM configuration now. Real virtualization can be connected later.</p><button class="primary" id="createEmpty">Create your first VM</button></div>
+      <div id="empty" class="empty"><div class="big-icon">▣</div><h2>No virtual machines yet</h2><p>Create a VM with configurable CPU, RAM, storage, display, audio, network, and boot hardware.</p><button class="primary" id="createEmpty">Create your first VM</button></div>
       <div id="machineGrid" class="machine-grid"></div>
     </section>
+
     <section id="create" class="view hidden">
       <div class="form-card">
-        <div class="section-head"><div><h2>New Virtual Machine</h2><p>Configure the hardware profile for your future VM.</p></div><span class="pill">CONFIG ONLY</span></div>
+        <div class="section-head"><div><h2>New Virtual Machine</h2><p>Configure virtual hardware and boot storage.</p></div><span class="pill">CONFIG ONLY</span></div>
         <form id="vmForm">
           <label>VM name<input id="name" value="My Idk VM" required></label>
-          <div class="two"><label>CPU cores<input id="cpu" type="number" min="1" max="64" value="4"></label><label>RAM<input id="ram" type="number" min="1" max="512" value="8"><small>GB</small></label></div>
-          <div class="two"><label>Disk<input id="disk" type="number" min="1" max="4096" value="64"><small>GB</small></label><label>Network<select id="network"><option>NAT</option><option>Bridged</option><option>Isolated</option></select></label></div>
-          <label>ISO image<input id="iso" placeholder="No ISO selected"><small>Example: ubuntu.iso</small></label>
-          <div class="two"><label>Display<select id="display"><option>Default</option><option>VirtIO GPU</option><option>VGA</option></select></label><label>Sound<select id="sound"><option>Enabled</option><option>Disabled</option></select></label></div>
+
+          <div class="hardware-section"><h3>CPU & Memory</h3>
+            <div class="two">
+              <label>CPU cores<select id="cpu"><option>1</option><option>2</option><option selected>4</option><option>8</option><option>16</option><option>32</option><option>64</option></select></label>
+              <label>CPU model<select id="cpuModel"><option value="host">Host compatible</option><option value="qemu64">QEMU 64-bit</option><option value="max">Maximum features</option></select></label>
+            </div>
+            <div class="two">
+              <label>RAM<select id="ram"><option>1</option><option>2</option><option>4</option><option selected>8</option><option>16</option><option>32</option><option>64</option><option>128</option></select><small>GB</small></label>
+              <label>CPU topology<select id="topology"><option value="simple">Simple</option><option value="cores">Cores + threads</option><option value="sockets">Sockets + cores</option></select></label>
+            </div>
+          </div>
+
+          <div class="hardware-section"><h3>Storage</h3>
+            <div class="two">
+              <label>Disk size<input id="disk" type="number" min="1" max="65536" value="64"><small>GB virtual disk</small></label>
+              <label>Disk bus<select id="diskBus"><option value="ide">IDE</option><option value="sata" selected>SATA</option><option value="scsi">SCSI</option><option value="virtio">VirtIO</option><option value="nvme">NVMe</option></select></label>
+            </div>
+            <label>ISO image
+              <div class="file-row"><input id="iso" placeholder="No ISO selected" readonly><button type="button" class="secondary" id="importIso">Import ISO</button><input id="isoFile" type="file" accept=".iso,application/x-iso9660-image" hidden></div>
+              <small id="isoMeta">Choose an ISO from your device. The imported image is stored in this browser and can be attached to this VM.</small>
+            </label>
+            <div class="partition-box"><div><strong>Virtual disk partitions</strong><span>Partition layout for the guest OS. Windows installers can partition the virtual disk during setup.</span></div><button type="button" class="secondary" id="managePartitions">Manage partitions</button></div>
+          </div>
+
+          <div class="hardware-section"><h3>Display & Audio</h3>
+            <div class="two">
+              <label>Display adapter<select id="display"><option value="default">Default</option><option value="vga">Standard VGA</option><option value="virtio">VirtIO GPU</option><option value="qxl">QXL</option><option value="vmware">VMware SVGA</option></select></label>
+              <label>Video memory<select id="videoMemory"><option>16</option><option selected>32</option><option>64</option><option>128</option><option>256</option></select><small>MB</small></label>
+            </div>
+            <label>Resolution<select id="resolution"><option>1024x768</option><option selected>1280x720</option><option>1280x1024</option><option>1920x1080</option></select></label>
+            <div class="two">
+              <label>Sound device<select id="sound"><option value="ac97">Intel AC97</option><option value="hda" selected>Intel HD Audio</option><option value="sb16">SoundBlaster 16</option><option value="virtio">VirtIO Sound</option><option value="none">Disabled</option></select></label>
+              <label>3D acceleration<select id="accel3d"><option value="off" selected>Disabled</option><option value="on">Enabled</option></select></label>
+            </div>
+          </div>
+
+          <div class="hardware-section"><h3>Network</h3>
+            <div class="two">
+              <label>Network mode<select id="network"><option value="nat">NAT</option><option value="bridged">Bridged</option><option value="isolated">Isolated</option><option value="host-only">Host-only</option></select></label>
+              <label>Virtual adapter<select id="networkAdapter"><option value="virtio">VirtIO</option><option value="e1000">Intel E1000</option><option value="rtl8139">Realtek RTL8139</option></select></label>
+            </div>
+            <label>MAC address<input id="mac" placeholder="Auto-generated"></label>
+          </div>
+
+          <div class="hardware-section"><h3>Boot</h3>
+            <div class="two">
+              <label>Firmware<select id="firmware"><option value="bios" selected>BIOS</option><option value="uefi">UEFI</option></select></label>
+              <label>Boot device<select id="bootDevice"><option value="disk" selected>Virtual disk</option><option value="iso">ISO / CD-ROM</option><option value="network">Network</option></select></label>
+            </div>
+            <label>Boot order<input id="bootOrder" value="disk,iso,network"><small>Comma-separated: disk, iso, network</small></label>
+          </div>
+
           <div class="actions"><button type="button" class="secondary" id="cancel">Cancel</button><button class="primary">Create VM</button></div>
         </form>
       </div>
     </section>
+
     <section id="storage" class="view hidden">
-      <div class="form-card"><div class="section-head"><div><h2>Storage</h2><p>Virtual disks and ISO files will appear here once a backend is connected.</p></div></div><div class="storage-placeholder"><div class="big-icon">◫</div><strong>No storage connected</strong><span>Local file access and VM disk management will be added with the backend.</span></div></div>
+      <div class="form-card">
+        <div class="section-head"><div><h2>Storage</h2><p>Imported ISO images and virtual disk layouts.</p></div><button class="primary" id="storageImport">＋ Import ISO</button></div>
+        <input id="storageFile" type="file" accept=".iso,application/x-iso9660-image" hidden>
+        <div id="isoList" class="storage-list"></div>
+        <div class="partition-manager hidden" id="partitionManager">
+          <div class="section-head"><div><h2>Disk Partitions</h2><p>Define the virtual disk layout used by the guest OS.</p></div><button class="secondary" id="closePartitions">Close</button></div>
+          <div id="partitionList"></div>
+          <div class="partition-actions"><button class="secondary" id="addPartition">＋ Add partition</button><button class="primary" id="savePartitions">Save layout</button></div>
+        </div>
+      </div>
     </section>
   </main>
 </div>
