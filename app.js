@@ -8,6 +8,18 @@ let machines = [];
 let connected = false;
 let importedIso = null;
 let partitions = [{ name: 'System', sizeGb: 64, filesystem: 'Unformatted', type: 'Primary' }];
+let activeConsole = null;
+async function openConsole(vm) {
+  if (activeConsole) activeConsole.disconnect?.();
+  const data = await api('/vms/'+encodeURIComponent(vm.id)+'/console');
+  const panel=document.createElement('div'); panel.className='console-panel'; panel.innerHTML='<div class="console-head"><strong>'+esc(vm.name)+' console</strong><button class="secondary" id="closeConsole">Close</button></div><div class="console-screen" id="consoleScreen"></div>';
+  document.body.append(panel);
+  const { default: RFB } = await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.5.0/core/rfb.js');
+  const apiOrigin=new URL(API_BASE,location.href); const wsProtocol=apiOrigin.protocol==='https:'?'wss:':'ws:';
+  const wsUrl=wsProtocol+'//'+apiOrigin.host+'/api/vm/vms/'+encodeURIComponent(vm.id)+'/vnc';
+  const rfb=new RFB(panel.querySelector('#consoleScreen'),wsUrl); rfb.scaleViewport=true; rfb.resizeSession=true; rfb.showDotCursor=true; rfb.addEventListener('connect',()=>panel.classList.add('connected')); rfb.addEventListener('disconnect',()=>panel.querySelector('.console-head strong').textContent=vm.name+' console · disconnected');
+  activeConsole=rfb; panel.querySelector('#closeConsole').onclick=()=>{rfb.disconnect();panel.remove();activeConsole=null;};
+}
 
 function esc(x) { return String(x ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
 function show(v) {
@@ -89,14 +101,14 @@ function toForm(vm) {
 function render() {
   const grid=$('#machineGrid'); $('#empty').style.display=machines.length?'none':'block';
   grid.innerHTML=machines.map((m,i)=>{const status=m.status||'stopped'; const label=status.charAt(0).toUpperCase()+status.slice(1);
-    return '<article class="machine"><div class="machine-top"><div><h2>'+esc(m.name)+'</h2><p>Virtual hardware profile</p></div><span class="status">'+label+'</span></div><div class="specs"><div class="spec"><small>CPU</small><b>'+m.cpuCores+' cores</b></div><div class="spec"><small>RAM</small><b>'+Math.round(m.ramMb/1024)+' GB</b></div><div class="spec"><small>DISK</small><b>'+m.diskGb+' GB</b></div><div class="spec"><small>DISPLAY</small><b>'+esc(m.display||'default')+'</b></div><div class="spec"><small>AUDIO</small><b>'+esc(m.soundDevice||'hda')+'</b></div><div class="spec"><small>BOOT</small><b>'+esc(m.firmware||'bios')+'</b></div></div><div class="machine-actions"><button class="secondary" onclick="editVm('+i+')">Settings</button>'+(status==='running'?'<button class="secondary" onclick="stopVm('+i+')">Stop</button>':'<button class="primary" onclick="startVm('+i+')">Start</button>')+'</div></article>';
+    return '<article class="machine"><div class="machine-top"><div><h2>'+esc(m.name)+'</h2><p>Virtual hardware profile</p></div><span class="status">'+label+'</span></div><div class="specs"><div class="spec"><small>CPU</small><b>'+m.cpuCores+' cores</b></div><div class="spec"><small>RAM</small><b>'+Math.round(m.ramMb/1024)+' GB</b></div><div class="spec"><small>DISK</small><b>'+m.diskGb+' GB</b></div><div class="spec"><small>DISPLAY</small><b>'+esc(m.display||'default')+'</b></div><div class="spec"><small>AUDIO</small><b>'+esc(m.soundDevice||'hda')+'</b></div><div class="spec"><small>BOOT</small><b>'+esc(m.firmware||'bios')+'</b></div></div><div class="machine-actions"><button class="secondary" onclick="editVm('+i+')">Settings</button>'+(status==='running'?'<button class="secondary" onclick="openConsole(machines['+i+'])">Console</button><button class="secondary" onclick="stopVm('+i+')">Stop</button>':'<button class="primary" onclick="startVm('+i+')">Start</button>')+'</div></article>';
   }).join('');
 }
 async function refresh(){try{const health=await api('/health');setBackendState(Boolean(health.ok));const data=await api('/vms');machines=Array.isArray(data.vms)?data.vms:[];render();}catch(e){setBackendState(false,e.message);machines=[];render();}renderStorage();}
 async function startVm(i){try{const data=await api('/vms/'+encodeURIComponent(machines[i].id)+'/start',{method:'POST',body:'{}'});machines[i].status=data.status||'running';render();}catch(e){alert(e.message);}}
 async function stopVm(i){try{const data=await api('/vms/'+encodeURIComponent(machines[i].id)+'/stop',{method:'POST',body:'{}'});machines[i].status=data.status||'stopped';render();}catch(e){alert(e.message);}}
 async function editVm(i){toForm(machines[i]);show('create');}
-window.editVm=editVm;window.startVm=startVm;window.stopVm=stopVm;
+window.editVm=editVm;window.startVm=startVm;window.stopVm=stopVm;window.openConsole=openConsole;
 function resetForm(){delete $('#vmForm').dataset.edit;$('#vmForm').reset();$('#name').value='My Idk VM';$('#cpu').value=4;$('#ram').value=8;$('#disk').value=64;$('#diskBus').value='sata';$('#display').value='default';$('#sound').value='hda';$('#firmware').value='bios';$('#bootDevice').value='disk';$('#bootOrder').value='disk,iso,network';$('#iso').value='';$('#isoMeta').textContent='Choose an ISO from your device.';importedIso=null;partitions=[{name:'System',sizeGb:64,filesystem:'Unformatted',type:'Primary'}];}
 document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>show(n.dataset.view));
 $('#createTop').onclick=()=>{resetForm();show('create');}; $('#createEmpty').onclick=()=>$('#createTop').click(); $('#cancel').onclick=()=>show('machines');
