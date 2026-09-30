@@ -2,8 +2,23 @@ const $ = s => document.querySelector(s);
 const views = { machines: $('#machines'), create: $('#create'), storage: $('#storage') };
 const params = new URLSearchParams(location.search);
 const configuredApi = params.get('idkApi');
-const API_BASE = (configuredApi || 'http://localhost:8787/api').replace(/\/$/, '');
-const API = API_BASE.endsWith('/api/vm') ? API_BASE : API_BASE + '/vm';
+const fallbackApi = /github\\.io$/i.test(location.hostname)
+  ? 'http://localhost:8787/api/vm'
+  : new URL('/api/vm', location.origin).toString();
+
+function normalizeApiBase(value) {
+  try {
+    const url = new URL(String(value || fallbackApi), location.href);
+    url.hash = '';
+    url.search = '';
+    return url.toString().replace(/\\/$/, '');
+  } catch {
+    return fallbackApi.replace(/\\/$/, '');
+  }
+}
+
+const API_BASE = normalizeApiBase(configuredApi || fallbackApi);
+const API = API_BASE.endsWith('/api/vm') ? API_BASE : API_BASE.replace(/\\/$/, '') + '/vm';
 let machines = [];
 let connected = false;
 let importedIso = null;
@@ -37,10 +52,26 @@ function setBackendState(ok, message = '') {
   if (message) console.warn(message);
 }
 async function api(path, options = {}) {
-  const res = await fetch(API + path, { ...options, headers: { ...(options.body instanceof File ? {} : { 'Content-Type': 'application/json' }), ...(options.headers || {}) } });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.ok === false) throw new Error(data.error || 'VM backend request failed');
-  return data;
+  const url = API + path;
+  try {
+    const res = await fetch(url, {
+      cache: 'no-store',
+      ...options,
+      headers: {
+        ...(options.body instanceof File ? {} : { 'Content-Type': 'application/json' }),
+        ...(options.headers || {})
+      }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      const detail = data.error || data.message || `HTTP ${res.status} ${res.statusText}`.trim();
+      throw new Error(`VM backend request failed: ${detail}`);
+    }
+    return data;
+  } catch (error) {
+    if (error?.message?.startsWith('VM backend request failed:')) throw error;
+    throw new Error(`VM backend connection failed at ${url}. ${error?.message || 'Network request failed.'}`);
+  }
 }
 const dbPromise = new Promise((resolve, reject) => {
   const req = indexedDB.open('idk-vm-storage', 1);
