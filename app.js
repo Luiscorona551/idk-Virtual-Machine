@@ -62,20 +62,42 @@ async function dbDelete(id) {
 }
 function fmtBytes(n) { if (!n) return '0 B'; const units=['B','KB','MB','GB']; let i=0,v=n; while(v>=1024&&i<3){v/=1024;i++;} return v.toFixed(i?1:0)+' '+units[i]; }
 function newId() { return crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(16).slice(2); }
+async function uploadIsoToBackend(item) {
+  if (!connected || !item?.blob) return false;
+  try {
+    await api('/isos/' + encodeURIComponent(item.id), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/octet-stream', 'X-ISO-Name': encodeURIComponent(item.name) },
+      body: item.blob
+    });
+    item.uploadedToBackend = true;
+    await dbPut(item);
+    return true;
+  } catch (e) {
+    item.uploadedToBackend = false;
+    await dbPut(item).catch(() => {});
+    return false;
+  }
+}
+async function syncBackendIsos() {
+  if (!connected) return;
+  const isos = await dbAll();
+  for (const item of isos) {
+    if (!item.uploadedToBackend) await uploadIsoToBackend(item);
+  }
+}
 async function importIso(file) {
   if (!file || !/\.iso$/i.test(file.name)) return alert('Please select an ISO image.');
-  const item = { id: newId(), name: file.name, size: file.size, addedAt: new Date().toISOString(), blob: file };
+  const item = { id: newId(), name: file.name, size: file.size, addedAt: new Date().toISOString(), blob: file, uploadedToBackend: false };
   await dbPut(item);
   importedIso = item;
   $('#iso').value = item.name;
   $('#isoMeta').textContent = fmtBytes(item.size) + ' • Imported into this browser.';
   if (connected) {
-    try {
-      await api('/isos/' + encodeURIComponent(item.id), { method: 'PUT', headers: { 'Content-Type': 'application/octet-stream', 'X-ISO-Name': encodeURIComponent(item.name) }, body: file });
-      $('#isoMeta').textContent = fmtBytes(item.size) + ' • Imported and uploaded to the VM backend.';
-    } catch (e) {
-      $('#isoMeta').textContent = fmtBytes(item.size) + ' • Stored locally; backend upload failed: ' + e.message;
-    }
+    const uploaded = await uploadIsoToBackend(item);
+    $('#isoMeta').textContent = uploaded
+      ? fmtBytes(item.size) + ' • Imported and uploaded to the VM backend.'
+      : fmtBytes(item.size) + ' • Stored locally; backend upload can be retried.';
   }
   renderStorage();
 }
@@ -104,7 +126,7 @@ function render() {
     return '<article class="machine"><div class="machine-top"><div><h2>'+esc(m.name)+'</h2><p>Virtual hardware profile</p></div><span class="status">'+label+'</span></div><div class="specs"><div class="spec"><small>CPU</small><b>'+m.cpuCores+' cores</b></div><div class="spec"><small>RAM</small><b>'+Math.round(m.ramMb/1024)+' GB</b></div><div class="spec"><small>DISK</small><b>'+m.diskGb+' GB</b></div><div class="spec"><small>DISPLAY</small><b>'+esc(m.display||'default')+'</b></div><div class="spec"><small>AUDIO</small><b>'+esc(m.soundDevice||'hda')+'</b></div><div class="spec"><small>BOOT</small><b>'+esc(m.firmware||'bios')+'</b></div></div><div class="machine-actions"><button class="secondary" onclick="editVm('+i+')">Settings</button>'+(status==='running'?'<button class="secondary" onclick="openConsole(machines['+i+'])">Console</button><button class="secondary" onclick="stopVm('+i+')">Stop</button>':'<button class="primary" onclick="startVm('+i+')">Start</button>')+'</div></article>';
   }).join('');
 }
-async function refresh(){try{const health=await api('/health');setBackendState(Boolean(health.ok));const data=await api('/vms');machines=Array.isArray(data.vms)?data.vms:[];render();}catch(e){setBackendState(false,e.message);machines=[];render();}renderStorage();}
+async function refresh(){try{const health=await api('/health');setBackendState(Boolean(health.ok));await syncBackendIsos();const data=await api('/vms');machines=Array.isArray(data.vms)?data.vms:[];render();}catch(e){setBackendState(false,e.message);machines=[];render();}renderStorage();}
 async function startVm(i){try{const data=await api('/vms/'+encodeURIComponent(machines[i].id)+'/start',{method:'POST',body:'{}'});machines[i].status=data.status||'running';render();}catch(e){alert(e.message);}}
 async function stopVm(i){try{const data=await api('/vms/'+encodeURIComponent(machines[i].id)+'/stop',{method:'POST',body:'{}'});machines[i].status=data.status||'stopped';render();}catch(e){alert(e.message);}}
 async function editVm(i){toForm(machines[i]);show('create');}
