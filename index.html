@@ -25,7 +25,7 @@
 
     <section id="create" class="view hidden">
       <div class="form-card">
-        <div class="section-head"><div><h2>New Virtual Machine</h2><p>Configure virtual hardware and boot storage.</p></div><span class="pill">CONFIG ONLY</span></div>
+        <div class="section-head"><div><h2>New Virtual Machine</h2><p>Build your own VM and install the operating system from your own ISO.</p></div><span class="pill">CUSTOM VM</span></div>
         <form id="vmForm">
           <label>VM name<input id="name" value="My Idk VM" required></label>
 
@@ -40,14 +40,14 @@
             </div>
           </div>
 
-          <div class="hardware-section"><h3>Storage</h3>
+          <div class="hardware-section"><h3>Storage & Installation Media</h3>
             <div class="two">
               <label>Disk size<input id="disk" type="number" min="1" max="65536" value="64"><small>GB virtual disk</small></label>
               <label>Disk bus<select id="diskBus"><option value="ide">IDE</option><option value="sata" selected>SATA</option><option value="scsi">SCSI</option><option value="virtio">VirtIO</option><option value="nvme">NVMe</option></select></label>
             </div>
-            <label>ISO image
+            <label>Operating system ISO
               <div class="file-row"><input id="iso" placeholder="No ISO selected" readonly><button type="button" class="secondary" id="importIso">Import ISO</button><input id="isoFile" type="file" accept=".iso,application/x-iso9660-image" hidden></div>
-              <small id="isoMeta">Choose an ISO from your device. The imported image is stored in this browser and can be attached to this VM.</small>
+              <small id="isoMeta">Import an ISO you have permission to use. Idk does not bundle an operating system; the selected image is attached to this VM.</small>
             </label>
             <div class="partition-box"><div><strong>Virtual disk partitions</strong><span>Partition layout for the guest OS. Windows installers can partition the virtual disk during setup.</span></div><button type="button" class="secondary" id="managePartitions">Manage partitions</button></div>
           </div>
@@ -87,7 +87,7 @@
 
     <section id="storage" class="view hidden">
       <div class="form-card">
-        <div class="section-head"><div><h2>Storage</h2><p>Imported ISO images and virtual disk layouts.</p></div><button class="primary" id="storageImport">＋ Import ISO</button></div>
+        <div class="section-head"><div><h2>Storage</h2><p>Your ISO images and virtual disk layouts. Use your own installation media to build any compatible guest OS.</p></div><button class="primary" id="storageImport">＋ Import ISO</button></div>
         <input id="storageFile" type="file" accept=".iso,application/x-iso9660-image" hidden>
         <div id="isoList" class="storage-list"></div>
         <div class="partition-manager hidden" id="partitionManager">
