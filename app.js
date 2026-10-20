@@ -2,7 +2,7 @@ const $ = s => document.querySelector(s);
 const views = { machines: $('#machines'), create: $('#create'), storage: $('#storage') };
 const params = new URLSearchParams(location.search);
 const configuredApi = params.get('idkApi');
-const fallbackApi = /github\\.io$/i.test(location.hostname)
+const fallbackApi = /github\.io$/i.test(location.hostname)
   ? 'http://localhost:8787/api/vm'
   : new URL('/api/vm', location.origin).toString();
 
@@ -11,14 +11,14 @@ function normalizeApiBase(value) {
     const url = new URL(String(value || fallbackApi), location.href);
     url.hash = '';
     url.search = '';
-    return url.toString().replace(/\\/$/, '');
+    return url.toString().replace(/\/$/, '');
   } catch {
-    return fallbackApi.replace(/\\/$/, '');
+    return fallbackApi.replace(/\/$/, '');
   }
 }
 
 const API_BASE = normalizeApiBase(configuredApi || fallbackApi);
-const API = API_BASE.endsWith('/api/vm') ? API_BASE : API_BASE.replace(/\\/$/, '') + '/vm';
+const API = API_BASE.endsWith('/api/vm') ? API_BASE : API_BASE.replace(/\/$/, '') + '/vm';
 let machines = [];
 let connected = false;
 let importedIso = null;
